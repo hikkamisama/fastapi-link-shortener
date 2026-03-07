@@ -1,7 +1,9 @@
+from datetime import UTC, datetime
 from typing import Optional
-from datetime import datetime, UTC
-from sqlalchemy import String, ForeignKey, DateTime
+
+from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
 
 class Base(DeclarativeBase):
     pass
@@ -14,9 +16,9 @@ class Link(Base):
     short_id: Mapped[str] = mapped_column(String(10), unique=True, index=True)
     alias: Mapped[Optional[str]] = mapped_column(String(50), unique=True, index=True, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
-    
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-
+    clicks: Mapped[int] = mapped_column(Integer, default=0)
+    last_clicked_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
     owner: Mapped[Optional["User"]] = relationship(back_populates="links")
 

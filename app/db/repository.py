@@ -1,14 +1,17 @@
-from datetime import datetime
+from datetime import UTC, datetime
+
 from sqlalchemy.orm import Session
-from app.db.models import User, Link
+
+from app.db.models import Link, User
+
 
 def get_user_by_username(db: Session, username: str) -> User | None:
     return db.query(User).filter(User.username == username).first()
 
 def create_user(db: Session, username: str, hashed_password: str, role: str = "user") -> User:
     db_user = User(
-        username=username, 
-        hashed_password=hashed_password, 
+        username=username,
+        hashed_password=hashed_password,
         role=role
     )
     db.add(db_user)
@@ -23,10 +26,10 @@ def is_short_id_taken(db: Session, short_id: str) -> bool:
     return db.query(Link).filter(Link.short_id == short_id).first() is not None
 
 def create_short_link(
-    db: Session, 
-    original_url: str, 
-    short_id: str, 
-    alias: str | None = None, 
+    db: Session,
+    original_url: str,
+    short_id: str,
+    alias: str | None = None,
     user_id: int | None = None,
     expires_at: datetime | None = None
 ) -> Link:
@@ -47,10 +50,10 @@ def delete_link(db: Session, link: Link):
     db.commit()
 
 def update_link(
-    db: Session, 
-    link: Link, 
-    new_url: str | None = None, 
-    new_alias: str | None = None, 
+    db: Session,
+    link: Link,
+    new_url: str | None = None,
+    new_alias: str | None = None,
     new_expires_at: datetime | None = None
 ) -> Link:
     if new_url:
@@ -66,3 +69,9 @@ def update_link(
 
 def get_link_by_code(db: Session, code: str) -> Link | None:
     return db.query(Link).filter((Link.short_id == code) | (Link.alias == code)).first()
+
+def record_click(db: Session, link: Link):
+    link.clicks += 1
+    link.last_clicked_at = datetime.now(UTC)
+    db.commit()
+    db.refresh(link)

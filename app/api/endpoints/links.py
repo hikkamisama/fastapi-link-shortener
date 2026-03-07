@@ -1,19 +1,19 @@
 from __future__ import annotations
-from typing import Annotated, Optional
+
 import random
 import string
-from datetime import datetime, UTC
+from datetime import UTC, datetime
+from typing import Annotated, Optional
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
-
 from sqlalchemy.orm import Session
 
+import app.db.repository as repository
+import app.schemas.schema as schema
 from app.core.config import DOMAIN
 from app.core.security import authenticate
 from app.db.session import get_db
-import app.db.repository as repository
-import app.schemas.schema as schema
 
 router = APIRouter()
 
@@ -32,7 +32,7 @@ def make_naive_utc(dt: datetime | None) -> datetime | None:
 
 @router.post("/links/shorten", response_model=schema.Response)
 def shorten_link(
-    request: schema.LinkRequest, 
+    request: schema.LinkRequest,
     user: Annotated[Optional[schema.User], Depends(authenticate)],
     db: Session = Depends(get_db)
 ):
@@ -45,16 +45,16 @@ def shorten_link(
             raise HTTPException(status_code=400, detail="Alias is already taken.")
         shortcode = request.alias
     else:
-        shortcode = generate_random_shortcode() 
+        shortcode = generate_random_shortcode()
         while repository.is_short_id_taken(db, shortcode):
             shortcode = generate_random_shortcode()
-    
+
     safe_expires_at = make_naive_utc(request.expires_at)
 
     repository.create_short_link(
-        db=db, 
-        original_url=str(request.url), 
-        short_id=shortcode, 
+        db=db,
+        original_url=str(request.url),
+        short_id=shortcode,
         alias=request.alias,
         user_id=db_user.id if db_user else None,
         expires_at=safe_expires_at
@@ -66,7 +66,7 @@ def shorten_link(
 @router.get("/links/{short_code}")
 def redirect_to_original(short_code: str, db: Session = Depends(get_db)):
     link = repository.get_link_by_code(db, short_code)
-    
+
     if not link:
         raise HTTPException(status_code=404, detail="Link not found")
 
@@ -77,24 +77,26 @@ def redirect_to_original(short_code: str, db: Session = Depends(get_db)):
         if expire_time < datetime.now(UTC):
             raise HTTPException(status_code=410, detail="This link has expired")
 
+    repository.record_click(db, link)
+
     return RedirectResponse(url=link.original_url)
 
 
 @router.delete("/links/{short_code}")
 def delete_shortened_link(
-    short_code: str, 
-    user: Annotated[schema.User, Depends(authenticate)], 
+    short_code: str,
+    user: Annotated[schema.User, Depends(authenticate)],
     db: Session = Depends(get_db)
 ):
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
-         
+
     link = repository.get_link_by_code(db, short_code)
     if not link:
         raise HTTPException(status_code=404, detail="Link not found")
 
     db_user = repository.get_user_by_username(db, user.username)
-    
+
     if link.user_id != db_user.id and user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized to delete this link")
 
@@ -117,12 +119,13 @@ def update_shortened_link(
         raise HTTPException(status_code=404, detail="Link not found")
 
     db_user = repository.get_user_by_username(db, user.username)
-    
+
     if link.user_id != db_user.id and user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized to update this link")
 
     if request.short_code and request.short_code != short_code:
-        if repository.is_alias_taken(db, request.short_code) or repository.is_short_id_taken(db, request.short_code):
+        if repository.is_alias_taken(db, request.short_code) or \
+           repository.is_short_id_taken(db, request.short_code):
             raise HTTPException(status_code=400, detail="The new short code is already taken")
 
     safe_expires_at = make_naive_utc(request.expires_at)
@@ -135,4 +138,14 @@ def update_shortened_link(
         new_expires_at=safe_expires_at
     )
 
-    return {"detail": "Link updated successfully", "new_link": f"{DOMAIN}/{link.alias or link.short_id}"}
+    return {
+        "detail": "Link updated successfully", "new_link": f"{DOMAIN}/{link.alias or link.short_id}"
+    }
+
+
+@router.get("/links/{short_code}/stats", response_model=schema.LinkStats)
+def get_link_stats(short_code: str, db: Session = Depends(get_db)):
+    link = repository.get_link_by_code(db, short_code)
+    if not link:
+        raise HTTPException(status_code=404, detail="Link not found")
+    return link
