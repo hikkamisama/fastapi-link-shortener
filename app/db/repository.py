@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -75,3 +75,42 @@ def record_click(db: Session, link: Link):
     link.last_clicked_at = datetime.now(UTC)
     db.commit()
     db.refresh(link)
+
+def get_links_by_original_url(db: Session, original_url: str) -> list[Link]:
+    return db.query(Link).filter(Link.original_url == original_url).all()
+
+def soft_delete_link(db: Session, link: Link, reason: str):
+    link.is_active = False
+    link.deletion_reason = reason
+    link.deleted_at = datetime.now(UTC)
+    db.commit()
+    db.refresh(link)
+
+def get_user_deleted_links(db: Session, user_id: int) -> list[Link]:
+    return db.query(Link).filter(
+        Link.user_id == user_id,
+        not Link.is_active
+    ).all()
+
+def cleanup_inactive_links(db: Session, days_inactive: int) -> int:
+    cutoff_date = datetime.now(UTC) - timedelta(days=days_inactive)
+    active_links = db.query(Link).filter(Link.is_active).all()
+    deleted_count = 0
+    for link in active_links:
+        last_activity = link.last_clicked_at if link.last_clicked_at else link.created_at
+        if last_activity.tzinfo is None:
+            last_activity = last_activity.replace(tzinfo=UTC)
+        if last_activity < cutoff_date:
+            soft_delete_link(db, link, reason=f"inactive_for_{days_inactive}_days")
+            deleted_count += 1
+    return deleted_count
+
+def purge_soft_deleted_links(db: Session, days_since_deleted: int) -> int:
+    cutoff_date = datetime.now(UTC) - timedelta(days=days_since_deleted)
+    query = db.query(Link).filter(
+        not Link.is_active,
+        Link.deleted_at < cutoff_date
+    )
+    deleted_count = query.delete(synchronize_session=False)
+    db.commit()
+    return deleted_count

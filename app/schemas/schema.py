@@ -5,6 +5,17 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator
 from app.core.config import RESERVED_WORDS
 
 
+class DeletedLinkInfo(BaseModel):
+    original_url: str
+    short_id: str
+    alias: str | None
+    clicks: int
+    is_active: bool
+    deletion_reason: str | None
+    deleted_at: datetime | None
+    model_config = {"from_attributes": True}
+
+
 class LinkRequest(BaseModel):
     url: HttpUrl
     alias: str | None = Field(
@@ -38,6 +49,14 @@ class LinkUpdateRequest(BaseModel):
         if value and value.lower() in RESERVED_WORDS:
             raise ValueError(f"The short code '{value}' is reserved and cannot be used.")
         return value
+
+
+class LinkSearchResult(BaseModel):
+    original_url: str
+    short_id: str
+    alias: str | None = None
+    created_at: datetime
+    model_config = {"from_attributes": True}
 
 
 class LinkStats(BaseModel):

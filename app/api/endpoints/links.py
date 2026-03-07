@@ -5,8 +5,9 @@ import string
 from datetime import UTC, datetime
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
+from pydantic import HttpUrl
 from sqlalchemy.orm import Session
 
 import app.db.repository as repository
@@ -63,18 +64,64 @@ def shorten_link(
     return schema.Response(response="Success", short_link=f"{DOMAIN}/{request.alias or shortcode}")
 
 
+@router.get("/links/search", response_model=list[schema.LinkSearchResult])
+def search_links(
+    original_url: HttpUrl = Query(..., description="The original URL to search for"),
+    db: Session = Depends(get_db)
+):
+    url_str = str(original_url)
+    links = repository.get_links_by_original_url(db, url_str)
+    if not links:
+        raise HTTPException(
+            status_code=404,
+            detail="No shortened links found for this URL"
+        )
+    return links
+
+@router.get("/links/history/deleted",response_model=list[schema.DeletedLinkInfo])
+def get_deleted_history(
+    user: Annotated[schema.UserSchema, Depends(authenticate)],
+    db: Session = Depends(get_db)
+):
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    db_user = repository.get_user_by_username(db, user.username)
+    history = repository.get_user_deleted_links(db, db_user.id)
+
+    return history
+
+
+@router.delete("/links/cleanup/inactive")
+def trigger_inactive_cleanup(
+    user: Annotated[schema.UserSchema, Depends(authenticate)],
+    days: int = Query(..., description="Number of days of inactivity before deletion"),
+    db: Session = Depends(get_db)
+):
+    if not user or user.role != "admin":
+         raise HTTPException(status_code=403, detail="Only admins can run cleanup tasks")
+    count = repository.cleanup_inactive_links(db, days)
+    return {"detail": f"Cleanup complete. {count} links were soft-deleted for inactivity."}
+
+
 @router.get("/links/{short_code}")
 def redirect_to_original(short_code: str, db: Session = Depends(get_db)):
     link = repository.get_link_by_code(db, short_code)
 
     if not link:
         raise HTTPException(status_code=404, detail="Link not found")
+    if not link.is_active:
+        raise HTTPException(
+            status_code=410,
+            detail=f"This link is no longer active. Reason: {link.deletion_reason}"
+        )
 
     if link.expires_at:
         expire_time = link.expires_at
         if expire_time.tzinfo is None:
             expire_time = expire_time.replace(tzinfo=UTC)
         if expire_time < datetime.now(UTC):
+            repository.soft_delete_link(db, link, reason="expired")
             raise HTTPException(status_code=410, detail="This link has expired")
 
     repository.record_click(db, link)
@@ -100,7 +147,7 @@ def delete_shortened_link(
     if link.user_id != db_user.id and user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized to delete this link")
 
-    repository.delete_link(db, link)
+    repository.soft_delete_link(db, link, reason="user_deleted")
     return {"detail": "Link deleted successfully"}
 
 
@@ -149,3 +196,15 @@ def get_link_stats(short_code: str, db: Session = Depends(get_db)):
     if not link:
         raise HTTPException(status_code=404, detail="Link not found")
     return link
+
+
+@router.delete("/links/cleanup/purge")
+def trigger_hard_delete_purge(
+    user: Annotated[schema.UserSchema, Depends(authenticate)],
+    days: int = Query(30, description="Permanently delete links soft-deleted more than N days ago"),
+    db: Session = Depends(get_db)
+):
+    if not user or user.role != "admin":
+         raise HTTPException(status_code=403, detail="Only admins can purge database records")
+    count = repository.purge_soft_deleted_links(db, days)
+    return {"detail": f"Database purged. {count} rows were permanently destroyed."}

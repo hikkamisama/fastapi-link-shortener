@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -12,20 +12,29 @@ class Link(Base):
     __tablename__ = "links"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
+
     original_url: Mapped[str] = mapped_column(String(2048))
     short_id: Mapped[str] = mapped_column(String(10), unique=True, index=True)
     alias: Mapped[Optional[str]] = mapped_column(String(50), unique=True, index=True, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
     clicks: Mapped[int] = mapped_column(Integer, default=0)
     last_clicked_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
     owner: Mapped[Optional["User"]] = relationship(back_populates="links")
+
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    deletion_reason: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
 class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
+
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     hashed_password: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(20), default="user")
