@@ -57,6 +57,7 @@ def update_link(
         link.original_url = new_url
     if new_alias:
         link.alias = new_alias
+        link.short_id = new_alias
     if new_expires_at:
         link.expires_at = new_expires_at
     db.commit()

@@ -125,12 +125,14 @@ def update_shortened_link(
         if repository.is_alias_taken(db, request.short_code) or repository.is_short_id_taken(db, request.short_code):
             raise HTTPException(status_code=400, detail="The new short code is already taken")
 
+    safe_expires_at = make_naive_utc(request.expires_at)
+
     repository.update_link(
         db=db,
         link=link,
         new_url=str(request.original_url) if request.original_url else None,
         new_alias=request.short_code,
-        new_expires_at=request.expires_at
+        new_expires_at=safe_expires_at
     )
 
     return {"detail": "Link updated successfully", "new_link": f"{DOMAIN}/{link.alias or link.short_id}"}
