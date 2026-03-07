@@ -21,6 +21,15 @@ def generate_random_shortcode(length: int = 6) -> str:
     chars = string.ascii_letters + string.digits
     return ''.join(random.choice(chars) for _ in range(length))
 
+
+def make_naive_utc(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:
+        return dt.astimezone(UTC).replace(tzinfo=None)
+    return dt
+
+
 @router.post("/links/shorten", response_model=schema.Response)
 def shorten_link(
     request: schema.LinkRequest, 
@@ -39,6 +48,8 @@ def shorten_link(
         shortcode = generate_random_shortcode() 
         while repository.is_short_id_taken(db, shortcode):
             shortcode = generate_random_shortcode()
+    
+    safe_expires_at = make_naive_utc(request.expires_at)
 
     repository.create_short_link(
         db=db, 
@@ -46,10 +57,11 @@ def shorten_link(
         short_id=shortcode, 
         alias=request.alias,
         user_id=db_user.id if db_user else None,
-        expires_at=request.expires_at
+        expires_at=safe_expires_at
     )
 
     return schema.Response(response="Success", short_link=f"{DOMAIN}/{request.alias or shortcode}")
+
 
 @router.get("/links/{short_code}")
 def redirect_to_original(short_code: str, db: Session = Depends(get_db)):
@@ -58,10 +70,15 @@ def redirect_to_original(short_code: str, db: Session = Depends(get_db)):
     if not link:
         raise HTTPException(status_code=404, detail="Link not found")
 
-    if link.expires_at and link.expires_at < datetime.now(UTC):
-        raise HTTPException(status_code=410, detail="This link has expired")
+    if link.expires_at:
+        expire_time = link.expires_at
+        if expire_time.tzinfo is None:
+            expire_time = expire_time.replace(tzinfo=UTC)
+        if expire_time < datetime.now(UTC):
+            raise HTTPException(status_code=410, detail="This link has expired")
 
     return RedirectResponse(url=link.original_url)
+
 
 @router.delete("/links/{short_code}")
 def delete_shortened_link(
@@ -83,6 +100,7 @@ def delete_shortened_link(
 
     repository.delete_link(db, link)
     return {"detail": "Link deleted successfully"}
+
 
 @router.put("/links/{short_code}")
 def update_shortened_link(

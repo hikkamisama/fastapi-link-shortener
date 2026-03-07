@@ -9,10 +9,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 
 from app.schemas.schema import User
-from config import SECRET_KEY, ALGORITHM
+from app.core.config import SECRET_KEY, ALGORITHM
 
 security = HTTPBearer(auto_error=False)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["sha256_crypt", "md5_crypt"])
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
