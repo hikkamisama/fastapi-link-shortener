@@ -114,3 +114,9 @@ def purge_soft_deleted_links(db: Session, days_since_deleted: int) -> int:
     deleted_count = query.delete(synchronize_session=False)
     db.commit()
     return deleted_count
+
+def get_popular_links(db: Session, limit: int = 100) -> list[Link]:
+    """Fetches the top N most clicked active links."""
+    return db.query(Link).filter(
+        Link.is_active
+    ).order_by(Link.clicks.desc()).limit(limit).all()

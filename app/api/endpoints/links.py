@@ -5,7 +5,7 @@ import string
 from datetime import UTC, datetime
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from pydantic import HttpUrl
 from sqlalchemy.orm import Session
@@ -14,11 +14,13 @@ import app.db.repository as repository
 import app.schemas.schema as schema
 from app.core.config import DOMAIN
 from app.core.security import authenticate
+from app.core.tasks import background_record_click
+from app.db.redis_cache import redis_client
 from app.db.session import get_db
 
 router = APIRouter()
 
-def generate_random_shortcode(length: int = 6) -> str:
+def generate_random_short_code(length: int = 6) -> str:
     chars = string.ascii_letters + string.digits
     return ''.join(random.choice(chars) for _ in range(length))
 
@@ -44,24 +46,24 @@ def shorten_link(
             raise HTTPException(status_code=401, detail="Must be logged in to use alias.")
         if repository.is_alias_taken(db, request.alias):
             raise HTTPException(status_code=400, detail="Alias is already taken.")
-        shortcode = request.alias
+        short_code = request.alias
     else:
-        shortcode = generate_random_shortcode()
-        while repository.is_short_id_taken(db, shortcode):
-            shortcode = generate_random_shortcode()
+        short_code = generate_random_short_code()
+        while repository.is_short_id_taken(db, short_code):
+            short_code = generate_random_short_code()
 
     safe_expires_at = make_naive_utc(request.expires_at)
 
     repository.create_short_link(
         db=db,
         original_url=str(request.url),
-        short_id=shortcode,
+        short_id=short_code,
         alias=request.alias,
         user_id=db_user.id if db_user else None,
         expires_at=safe_expires_at
     )
 
-    return schema.Response(response="Success", short_link=f"{DOMAIN}/{request.alias or shortcode}")
+    return schema.Response(response="Success", short_link=f"{DOMAIN}/{request.alias or short_code}")
 
 
 @router.get("/links/search", response_model=list[schema.LinkSearchResult])
@@ -105,7 +107,17 @@ def trigger_inactive_cleanup(
 
 
 @router.get("/links/{short_code}")
-def redirect_to_original(short_code: str, db: Session = Depends(get_db)):
+def redirect_to_original(
+    short_code: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    cache_key = f"link:{short_code}"
+    cached_url = redis_client.get(cache_key)
+    if cached_url:
+        background_tasks.add_task(background_record_click, short_code)
+        return RedirectResponse(url=cached_url)
+
     link = repository.get_link_by_code(db, short_code)
 
     if not link:
@@ -125,6 +137,8 @@ def redirect_to_original(short_code: str, db: Session = Depends(get_db)):
             raise HTTPException(status_code=410, detail="This link has expired")
 
     repository.record_click(db, link)
+    if link.clicks >= 20:
+        redis_client.setex(cache_key, 86400, link.original_url)
 
     return RedirectResponse(url=link.original_url)
 
@@ -148,6 +162,8 @@ def delete_shortened_link(
         raise HTTPException(status_code=403, detail="Not authorized to delete this link")
 
     repository.soft_delete_link(db, link, reason="user_deleted")
+    redis_client.delete(f"link:{short_code}")
+
     return {"detail": "Link deleted successfully"}
 
 
@@ -184,6 +200,7 @@ def update_shortened_link(
         new_alias=request.short_code,
         new_expires_at=safe_expires_at
     )
+    redis_client.delete(f"link:{short_code}")
 
     return {
         "detail": "Link updated successfully", "new_link": f"{DOMAIN}/{link.alias or link.short_id}"
