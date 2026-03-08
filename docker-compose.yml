@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+    api:
+        build: .
+        ports:
+            - "8000:8000"
+        depends_on:
+            - redis
+        environment:
+            - REDIS_URL=redis://redis:6379/0
+            
+            - DATABASE_URL=sqlite:///./data/shortener.db
+            
+            - SECRET_KEY=my_super_secret_jwt_key
+            
+        volumes:
+            - ./data:/app/data
+
+    redis:
+        image: redis:alpine
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis_data:/data
+
+volumes:
+    redis_data:

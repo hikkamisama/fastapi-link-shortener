@@ -1,6 +1,10 @@
-fastapi==0.124.0
-fastapi-cli==0.0.16
-fastapi-cloud-cli==0.6.0
-python-dotenv
+fastapi
+uvicorn
+sqlalchemy
 pydantic
-SQLAlchemy
+pydantic-settings
+passlib
+pyjwt
+redis
+apscheduler
+psycopg2-binary

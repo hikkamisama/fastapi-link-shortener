@@ -82,7 +82,7 @@ def search_links(
 
 @router.get("/links/history/deleted",response_model=list[schema.DeletedLinkInfo])
 def get_deleted_history(
-    user: Annotated[schema.UserSchema, Depends(authenticate)],
+    user: Annotated[schema.User, Depends(authenticate)],
     db: Session = Depends(get_db)
 ):
     if not user:
@@ -96,7 +96,7 @@ def get_deleted_history(
 
 @router.delete("/links/cleanup/inactive")
 def trigger_inactive_cleanup(
-    user: Annotated[schema.UserSchema, Depends(authenticate)],
+    user: Annotated[schema.User, Depends(authenticate)],
     days: int = Query(..., description="Number of days of inactivity before deletion"),
     db: Session = Depends(get_db)
 ):
@@ -217,7 +217,7 @@ def get_link_stats(short_code: str, db: Session = Depends(get_db)):
 
 @router.delete("/links/cleanup/purge")
 def trigger_hard_delete_purge(
-    user: Annotated[schema.UserSchema, Depends(authenticate)],
+    user: Annotated[schema.User, Depends(authenticate)],
     days: int = Query(30, description="Permanently delete links soft-deleted more than N days ago"),
     db: Session = Depends(get_db)
 ):
