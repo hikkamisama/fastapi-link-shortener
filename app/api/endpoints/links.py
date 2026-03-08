@@ -208,10 +208,17 @@ def update_shortened_link(
 
 
 @router.get("/links/{short_code}/stats", response_model=schema.LinkStats)
-def get_link_stats(short_code: str, db: Session = Depends(get_db)):
+def get_link_stats(
+    short_code: str,
+    user: Annotated[schema.User, Depends(authenticate)],
+    db: Session = Depends(get_db)):
     link = repository.get_link_by_code(db, short_code)
     if not link:
         raise HTTPException(status_code=404, detail="Link not found")
+    db_user = repository.get_user_by_username(db, user.username)
+
+    if link.user_id != db_user.id and user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to view these stats")
     return link
 
 

@@ -89,12 +89,12 @@ def soft_delete_link(db: Session, link: Link, reason: str):
 def get_user_deleted_links(db: Session, user_id: int) -> list[Link]:
     return db.query(Link).filter(
         Link.user_id == user_id,
-        not Link.is_active
+        Link.is_active.is_(False)
     ).all()
 
 def cleanup_inactive_links(db: Session, days_inactive: int) -> int:
     cutoff_date = datetime.now(UTC) - timedelta(days=days_inactive)
-    active_links = db.query(Link).filter(Link.is_active).all()
+    active_links = db.query(Link).filter(Link.is_active.is_(True)).all()
     deleted_count = 0
     for link in active_links:
         last_activity = link.last_clicked_at if link.last_clicked_at else link.created_at
@@ -108,7 +108,7 @@ def cleanup_inactive_links(db: Session, days_inactive: int) -> int:
 def purge_soft_deleted_links(db: Session, days_since_deleted: int) -> int:
     cutoff_date = datetime.now(UTC) - timedelta(days=days_since_deleted)
     query = db.query(Link).filter(
-        not Link.is_active,
+        Link.is_active.is_(False),
         Link.deleted_at < cutoff_date
     )
     deleted_count = query.delete(synchronize_session=False)
@@ -118,5 +118,5 @@ def purge_soft_deleted_links(db: Session, days_since_deleted: int) -> int:
 def get_popular_links(db: Session, limit: int = 100) -> list[Link]:
     """Fetches the top N most clicked active links."""
     return db.query(Link).filter(
-        Link.is_active
+        Link.is_active.is_(True)
     ).order_by(Link.clicks.desc()).limit(limit).all()
