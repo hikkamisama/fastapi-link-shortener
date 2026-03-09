@@ -1,9 +1,13 @@
+import importlib
+from unittest.mock import patch
+
 import pytest
 from pydantic import ValidationError
 
+import app.core.config
 from app.db.session import get_db
 from app.schemas.schema import (
-    LinkRequest,  # Update path if your schema file is named differently!
+    LinkRequest,
     LinkUpdateRequest,
 )
 
@@ -24,3 +28,26 @@ def test_get_db_generator():
     assert db_session is not None
     with pytest.raises(StopIteration):
         next(db_generator)
+
+def test_session_engine_creation_postgres():
+    original_url = app.core.config.DATABASE_URL
+    try:
+        app.core.config.DATABASE_URL = "postgres://user:pass@localhost/db"
+        with patch("sqlalchemy.create_engine") as mock_create_engine:
+            importlib.reload(app.db.session)
+            mock_create_engine.assert_called_once_with("postgresql://user:pass@localhost/db")
+    finally:
+        app.core.config.DATABASE_URL = original_url
+        importlib.reload(app.db.session)
+
+def test_session_engine_creation_other_db():
+    original_url = app.core.config.DATABASE_URL
+    try:
+        app.core.config.DATABASE_URL = "mysql://user:pass@localhost/db"
+        with patch("sqlalchemy.create_engine") as mock_create_engine:
+            importlib.reload(app.db.session)
+            mock_create_engine.assert_called_once_with("mysql://user:pass@localhost/db")
+
+    finally:
+        app.core.config.DATABASE_URL = original_url
+        importlib.reload(app.db.session)
