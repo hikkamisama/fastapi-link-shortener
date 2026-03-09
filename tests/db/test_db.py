@@ -35,7 +35,14 @@ def test_session_engine_creation_postgres():
         app.core.config.DATABASE_URL = "postgres://user:pass@localhost/db"
         with patch("sqlalchemy.create_engine") as mock_create_engine:
             importlib.reload(app.db.session)
-            mock_create_engine.assert_called_once_with("postgresql://user:pass@localhost/db")
+            mock_create_engine.assert_called_once_with(
+                "postgresql://user:pass@localhost/db",
+                pool_size=20,
+                max_overflow=20,
+                pool_timeout=30,
+                pool_recycle=1800,
+                pool_pre_ping=True
+            )
     finally:
         app.core.config.DATABASE_URL = original_url
         importlib.reload(app.db.session)
@@ -46,7 +53,14 @@ def test_session_engine_creation_other_db():
         app.core.config.DATABASE_URL = "mysql://user:pass@localhost/db"
         with patch("sqlalchemy.create_engine") as mock_create_engine:
             importlib.reload(app.db.session)
-            mock_create_engine.assert_called_once_with("mysql://user:pass@localhost/db")
+            mock_create_engine.assert_called_once_with(
+                "mysql://user:pass@localhost/db",
+                pool_size=20,
+                max_overflow=20,
+                pool_timeout=30,
+                pool_recycle=1800,
+                pool_pre_ping=True
+            )
 
     finally:
         app.core.config.DATABASE_URL = original_url

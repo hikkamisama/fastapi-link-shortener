@@ -9,7 +9,7 @@ def test_rerouting_deleted_link(client, auth_header):
         headers=auth_header
     )
     client.delete("/links/bing", headers=auth_header)
-    response = client.get("/links/bing")
+    response = client.get("/bing")
     assert response.status_code == 410
     assert "user_deleted" in response.json()["detail"]
 

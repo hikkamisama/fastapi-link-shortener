@@ -13,7 +13,7 @@ from app.db.session import get_db
 
 router = APIRouter()
 
-@router.get("/links/{short_code}")
+@router.get("/{short_code}")
 def redirect_to_original(
     short_code: str,
     background_tasks: BackgroundTasks,

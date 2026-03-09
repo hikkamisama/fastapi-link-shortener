@@ -13,7 +13,7 @@ from app.db.session import get_db
 
 router = APIRouter()
 
-@router.delete("/links/cleanup/inactive")
+@router.delete("/cleanup/inactive")
 def trigger_inactive_cleanup(
     user: Annotated[schema.User, Depends(authenticate)],
     days: int = Query(..., description="Number of days of inactivity before deletion"),
@@ -24,7 +24,7 @@ def trigger_inactive_cleanup(
     count = repository.cleanup_inactive_links(db, days)
     return {"detail": f"Cleanup complete. {count} links were soft-deleted for inactivity."}
 
-@router.delete("/links/{short_code}")
+@router.delete("/{short_code}")
 def delete_shortened_link(
     short_code: str,
     user: Annotated[schema.User, Depends(authenticate)],
@@ -47,7 +47,7 @@ def delete_shortened_link(
 
     return {"detail": "Link deleted successfully"}
 
-@router.delete("/links/cleanup/purge")
+@router.delete("/cleanup/purge")
 def trigger_hard_delete_purge(
     user: Annotated[schema.User, Depends(authenticate)],
     days: int = Query(30, description="Permanently delete links soft-deleted more than N days ago"),

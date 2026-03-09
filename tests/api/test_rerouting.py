@@ -7,7 +7,7 @@ def test_rerouting_success(client, auth_header):
         json={"url": "https://github.com", "alias": "git"},
         headers=auth_header
     )
-    response = client.get("/links/git", follow_redirects=False)
+    response = client.get("/git", follow_redirects=False)
 
     assert response.status_code == 307
     assert response.headers["location"] == "https://github.com/"
@@ -20,6 +20,6 @@ def test_rerouting_expired_link(client, auth_header):
         headers=auth_header
     )
     assert post_response.status_code == 200, post_response.json()
-    response = client.get("/links/expired-git")
+    response = client.get("/expired-git")
     assert response.status_code == 410
     assert "expired" in response.json()["detail"]

@@ -23,7 +23,7 @@ def test_search_links_success_and_fail(client, auth_header):
 
 def test_redirect_not_found(client):
     """Hits the 'if not link -> 404' block."""
-    res = client.get("/links/nonexistent-code", follow_redirects=False)
+    res = client.get("/nonexistent-code", follow_redirects=False)
     assert res.status_code == 404
 
 def test_redirect_inactive(client, auth_header):
@@ -33,6 +33,6 @@ def test_redirect_inactive(client, auth_header):
         headers=auth_header
     )
     client.delete("/links/dead-link", headers=auth_header)
-    res = client.get("/links/dead-link", follow_redirects=False)
+    res = client.get("/dead-link", follow_redirects=False)
     assert res.status_code == 410
     assert "no longer active" in res.json()["detail"].lower()

@@ -15,7 +15,7 @@ from app.db.session import get_db
 
 router = APIRouter()
 
-@router.put("/links/{short_code}")
+@router.put("/{short_code}")
 def update_shortened_link(
     short_code: str,
     request: schema.LinkUpdateRequest,

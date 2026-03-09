@@ -10,7 +10,7 @@ from app.db.session import get_db
 
 router = APIRouter()
 
-@router.get("/links/search", response_model=list[schema.LinkSearchResult])
+@router.get("/search", response_model=list[schema.LinkSearchResult])
 def search_links(
     original_url: HttpUrl = Query(..., description="The original URL to search for"),
     db: Session = Depends(get_db)

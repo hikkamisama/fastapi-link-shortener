@@ -14,7 +14,7 @@ from app.db.session import get_db
 
 router = APIRouter()
 
-@router.post("/links/shorten", response_model=schema.Response)
+@router.post("/shorten", response_model=schema.Response)
 def shorten_link(
     request: schema.LinkRequest,
     user: Annotated[Optional[schema.User], Depends(authenticate)],

@@ -12,7 +12,7 @@ from app.db.session import get_db
 
 router = APIRouter()
 
-@router.get("/links/{short_code}/stats", response_model=schema.LinkStats)
+@router.get("/{short_code}/stats", response_model=schema.LinkStats)
 def get_link_stats(
     short_code: str,
     user: Annotated[schema.User, Depends(authenticate)],

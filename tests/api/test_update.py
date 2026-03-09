@@ -20,7 +20,7 @@ def test_update_success(client, auth_header):
     res = client.put("/links/up-link", json=payload, headers=auth_header)
     assert res.status_code == 200
     assert "new-link" in res.json()["new_link"]
-    get_res = client.get("/links/new-link", follow_redirects=False)
+    get_res = client.get("/new-link", follow_redirects=False)
     assert get_res.headers["location"] == "https://new.com/"
 
 def test_update_alias_already_taken(client, auth_header):

@@ -12,7 +12,7 @@ from app.db.session import get_db
 
 router = APIRouter()
 
-@router.get("/links/history/deleted",response_model=list[schema.DeletedLinkInfo])
+@router.get("/history/deleted",response_model=list[schema.DeletedLinkInfo])
 def get_deleted_history(
     user: Annotated[schema.User, Depends(authenticate)],
     db: Session = Depends(get_db)

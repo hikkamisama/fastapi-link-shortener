@@ -8,9 +8,9 @@ def test_get_stats_success(client, auth_header):
         json={"url": "https://datatester.com", "alias": "stats-link"},
         headers=auth_header
     )
-    client.get("/links/stats-link", follow_redirects=False)
-    client.get("/links/stats-link", follow_redirects=False)
-    client.get("/links/stats-link", follow_redirects=False)
+    client.get("/stats-link", follow_redirects=False)
+    client.get("/stats-link", follow_redirects=False)
+    client.get("/stats-link", follow_redirects=False)
     response = client.get("/links/stats-link/stats", headers=auth_header)
     assert response.status_code == 200, response.json()
     data = response.json()
