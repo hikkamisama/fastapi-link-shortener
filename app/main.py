@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.endpoints import auth, links
+from app.api.endpoints.init import routers
 from app.core.tasks import start_scheduler, stop_scheduler
 
 
@@ -18,5 +18,5 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-app.include_router(auth.router, tags=["Authentication"])
-app.include_router(links.router, tags=["Links"])
+for name, router in routers:
+    app.include_router(router, tags=[name])

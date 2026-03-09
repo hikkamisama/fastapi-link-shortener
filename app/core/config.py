@@ -7,13 +7,19 @@ load_dotenv()
 RESERVED_WORDS = {
     "admin",
     "api",
+    "cleanup",
+    "cleanup/inactive",
+    "cleanup/purge",
     "delete",
     "docs",
+    "history"
+    "history/deleted",
     "login",
+    "search",
     "signup",
     "shorten",
     "stats",
-    "users"
+    "users",
 }
 
 SECRET_KEY = os.getenv("SECRET_KEY")
