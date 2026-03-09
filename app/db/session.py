@@ -1,8 +1,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+import app.db.models as models
 from app.core.config import DATABASE_URL
-from app.db.models import Base
 
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
@@ -26,7 +26,8 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():
     db = SessionLocal()
-    Base.metadata.create_all(engine)
+    models.Base.metadata.drop_all(bind=engine)
+    models.Base.metadata.create_all(engine)
     try:
         yield db
     finally:
