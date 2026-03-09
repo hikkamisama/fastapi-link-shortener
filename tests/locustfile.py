@@ -29,7 +29,7 @@ class LinkShortenerUser(HttpUser):
     @task(3)
     def redirect_test(self):
         with self.client.get(
-            f"/links/{self.test_alias}",
+            f"/{self.test_alias}",
             catch_response=True,
             allow_redirects=False
         ) as response:
