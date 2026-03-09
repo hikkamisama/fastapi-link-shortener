@@ -14,7 +14,7 @@ class Link(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
 
     original_url: Mapped[str] = mapped_column(String(2048))
-    short_id: Mapped[str] = mapped_column(String(10), unique=True, index=True)
+    short_id: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     alias: Mapped[Optional[str]] = mapped_column(String(50), unique=True, index=True, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
