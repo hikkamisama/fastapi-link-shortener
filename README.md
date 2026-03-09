@@ -1,8 +1,10 @@
-# FastAPI URL Shortener
+# FastAPI link shortener
 
 ---
 
 ## Описание API:
+
+Сервис поднят с помощью `render.com`, endpoint: `https://fastapi-link-shortener-bzo5.onrender.com`
 
 | Метод | Эндпоинт              | Требует Auth        | Описание                                                                         |
 | :--------- | :---------------------------- | :------------------------- | :--------------------------------------------------------------------------------------- |
@@ -25,7 +27,7 @@
 Создание аккаунта:
 
 ```bash
-curl -X POST "http://localhost:8000/signup"
+curl -X POST "https://fastapi-link-shortener-bzo5.onrender.com/signup"
     -H "Content-Type: application/json"
     -d '{"username": "johndoe", "password": "supersecretpassword"}'
 ```
@@ -33,7 +35,7 @@ curl -X POST "http://localhost:8000/signup"
 Получение токена авторизации:
 
 ```bash
-curl -X POST "http://localhost:8000/login"
+curl -X POST "https://fastapi-link-shortener-bzo5.onrender.com/login"
     -H "Content-Type: application/json"
     -d '{"username": "johndoe", "password": "supersecretpassword"}'
 ```
@@ -43,7 +45,7 @@ curl -X POST "http://localhost:8000/login"
 *Замените <ТОКЕН> на токен из предыдущего шага.*
 
 ```bash
-curl -X POST "http://localhost:8000/links/shorten"
+curl -X POST "https://fastapi-link-shortener-bzo5.onrender.com/links/shorten"
     -H "Authorization: Bearer <ТОКЕН>"
     -H "Content-Type: application/json"
     -d '{"url": "https://github.com", "alias": "my-git"}'
@@ -52,7 +54,7 @@ curl -X POST "http://localhost:8000/links/shorten"
 ### 3. Редирект (Получение оригинального сайта)
 
 ```
-curl -i "http://localhost:8000/links/my-git"
+curl -i "https://fastapi-link-shortener-bzo5.onrender.com/links/my-git"
 ```
 
 *Сервер ответит заголовком 307 Temporary Redirect и полем Location: https://github.com/.*
@@ -60,7 +62,7 @@ curl -i "http://localhost:8000/links/my-git"
 ### 4. Получение статистики кликов
 
 ```bash
-curl -X GET "http://localhost:8000/links/my-git/stats"
+curl -X GET "https://fastapi-link-shortener-bzo5.onrender.com/links/my-git/stats"
     -H "Authorization: Bearer <ТОКЕН>"
 ```
 
